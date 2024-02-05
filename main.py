@@ -1,16 +1,15 @@
-# 这是一个示例 Python 脚本。
-
-# 按 Shift+F10 执行或将其替换为您的代码。
-# 按 双击 Shift 在所有地方搜索类、文件、工具窗口、操作和设置。
+from Solution.DQN import dqn_train_model
 
 
-def print_hi(name):
-    # 在下面的代码行中使用断点来调试脚本。
-    print(f'Hi, {name}')  # 按 Ctrl+F8 切换断点。
+def train():
+    remark = 'train map 1'
+    game_map_file_name = 'train_map_1.txt'
+    model_dict_path = None
+    memory_path = 'memory_1.json'
+    for i in range(10):
+        model_dict_path = dqn_train_model(model_dict_path=model_dict_path, memory_file=memory_path, remark=remark,
+                                          game_map_file_name=game_map_file_name)
 
 
-# 按装订区域中的绿色按钮以运行脚本。
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# 访问 https://www.jetbrains.com/help/pycharm/ 获取 PyCharm 帮助
+    train()
