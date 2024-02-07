@@ -12,6 +12,7 @@ CITY_REWARDS = NODE_NUM ** 2
 
 class TSProblem:
     def __init__(self, node_num):
+        self.distance_table = None
         self.steps = None
         self.rewards = None
         self.done = None
@@ -35,6 +36,7 @@ class TSProblem:
         if reset_node:
             self._generate_node(node_data)
         self.save(save_node_path)
+        self.distance_table = np.full(fill_value=-1, shape=(self.node_num, self.node_num), dtype=np.float32)
         map_datastr = self._save_data_to_string()
         map_datastr.replace('\n', ';')
         self.game_log = map_datastr
@@ -43,23 +45,30 @@ class TSProblem:
 
     def step(self, action):
         if not self.done:
-            if action in self.actions:
-                # if self.visited[action] == False:
-                #     last_node = self.current_node
-                #     self.current_node = action
-                #     self.visited[action] = True
-                #     self.rewards += CITY_REWARDS
-                #     self.steps += 1
+            if action in self.actions[1:]:
+                if self.visited[action] == False:
+                    last_node = self.current_node
+                    self.current_node = action
+                    self.visited[action] = True
+                    self.rewards += CITY_REWARDS
+                    self.rewards -= (
+                        TSProblem._get_two_distance_euclidean(self.map_nodes[last_node],
+                                                              self.map_nodes[self.current_node]))
+                    self.steps += 1
+            elif action == 0:
+                if self.visited.all():
+                    self.rewards += CITY_REWARDS * 2
+                    self.done = True
 
-                last_node = self.current_node
-                self.current_node = action
-                self.rewards += CITY_REWARDS if self.visited[self.current_node] == False else 0
-                self.visited[self.current_node] = True
-                self.rewards -= (
-                    TSProblem._get_two_distance_euclidean(self.map_nodes[last_node], self.map_nodes[self.current_node]))
-                self.steps += 1
-        if (self.steps > 0 and self.current_node == 0) or self.rewards < 0:
-            self.done = True
+                # last_node = self.current_node
+                # self.current_node = action
+                # self.rewards += CITY_REWARDS if self.visited[self.current_node] == False else 0
+                # self.visited[self.current_node] = True
+                # self.rewards -= (
+                #     TSProblem._get_two_distance_euclidean(self.map_nodes[last_node], self.map_nodes[self.current_node]))
+                # self.steps += 1
+        # if (self.steps > 0 and self.current_node == 0) or self.rewards < 0:
+        #     self.done = True
         info = 'node={}, rewards={}, steps={}'.format(self.current_node, self.rewards, self.steps)
         self.game_log += info
         self.game_log += '\n'
@@ -68,7 +77,7 @@ class TSProblem:
     def _generate_node(self, node_data=None):
         # 生成 node_num个坐标点，每个点都在 (node_num, node_num) 之内
         if node_data is None:
-            self.map_nodes = np.random.randint([0, 0], [self.node_num, self.node_num], size=(self.node_num, 2))
+            self.map_nodes = np.concatenate((np.array([0, 0]), np.random.randint([0, 0], [self.node_num-1, self.node_num-1], size=(self.node_num, 2))), axis=0)
         else:
             self.load(node_data)
 
@@ -105,9 +114,15 @@ class TSProblem:
             save_str += '({},{})\n'.format(node[0], node[1])
         return save_str
 
-    @staticmethod
-    def _get_two_distance_euclidean(p1, p2):
-        return 0 if p1[0] == p2[0] and p1[1] == p2[1] else math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+    def _get_two_distance_euclidean(self, p1, p2):
+        if p1[0] == p2[0] and p1[1] == p2[1]:
+            return 0
+        if self.distance_table[p1[0], p2[0]] != -1:
+            return self.distance_table[p1[0], p2[0]]
+        d = math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+        self.distance_table[p1[0], p2[0]] = d
+        self.distance_table[p2[0], p1[0]] = d
+        return d
 
     def _get_state(self):
         # 状态包括，当前节点的node_num个权值，以及-1 0 1代表已探索、当前位置、未探索
